@@ -14,12 +14,14 @@ then
   RETURN_CREATE_USER=$($PSQL "INSERT INTO users(username) VALUES('$USER_NAME')")
   echo Welcome, $USER_NAME! It looks like this is your first time here.
   RETURN_USER_ID=$($PSQL "SELECT user_id FROM users WHERE username='$USER_NAME'")
+  #create rank
+  RETURN_CREATE_RANK=$($PSQL "INSERT INTO rank(user_id, best_game, games_played) VALUES($RETURN_USER_ID, 0,0)")
 else
 #user found. go to the play
 
 RETURN_PLAYED_GAMES=$($PSQL "SELECT games_played FROM rank WHERE user_id='$RETURN_USER_ID'")
 RETURN_HIGHSCORE=$($PSQL "SELECT best_game FROM rank WHERE user_id='$RETURN_USER_ID'")
-echo Welcome back, $USER_NAME! You have played $RETURN_PLAYED_GAMES games, and your best game took $RETURN_HIGHSCORE guesses.
+echo "Welcome back, $USER_NAME! You have played $RETURN_PLAYED_GAMES games, and your best game took $RETURN_HIGHSCORE guesses."
 fi
 
 GAME_INIT
@@ -61,12 +63,21 @@ fi
 }
 
 FINAL(){
-#store values 
+  NUMBER_PLAYED_GAMES=$($PSQL "SELECT games_played FROM rank WHERE user_id=$RETURN_USER_ID")
+  
+  HIGH_SCORE=$($PSQL "SELECT best_game FROM rank WHERE user_id=$RETURN_USER_ID")
+  if [[ $NUMBER_OF_GUESS -lt $HIGH_SCORE || $HIGH_SCORE -eq 0 ]]
+  then
+    #push highscore
+    RETURNED_VALUE_HIGH=$($PSQL "UPDATE rank SET best_game = $NUMBER_OF_GUESS WHERE user_id=$RETURN_USER_ID")
+  fi
 
-
-#and print end message
-echo You guessed it in $NUMBER_OF_GUESS tries. The secret number was $RANDOM_NUMBER. Nice job!
-#
+  #store played games
+  NUMBER_PLAYED_GAMES=$(($NUMBER_PLAYED_GAMES +1))
+  RETURNED_VALUE_GAMES=$($PSQL "UPDATE rank SET games_played = $NUMBER_PLAYED_GAMES WHERE user_id=$RETURN_USER_ID")
+  #and print end message
+  echo "You guessed it in $NUMBER_OF_GUESS tries. The secret number was $RANDOM_NUMBER. Nice job!"
+  #
 }
 
 MAIN_MENU
